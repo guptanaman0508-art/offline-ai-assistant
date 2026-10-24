@@ -1,0 +1,53 @@
+[
+  {
+    "id": "q1_binary_search",
+    "category": "factual_explanation",
+    "prompt": "Explain Binary Search in 3 clear bullet points. Mention its time complexity.",
+    "reference_key_points": [
+      "Requires sorted array/list",
+      "Repeatedly divides the search interval in half",
+      "Time complexity is O(log n)"
+    ]
+  },
+  {
+    "id": "q2_process_vs_thread",
+    "category": "factual_explanation",
+    "prompt": "What is the difference between a process and a thread in an operating system? Answer in 3 sentences.",
+    "reference_key_points": [
+      "Process has its own isolated memory space",
+      "Threads share the parent process memory space",
+      "Context switching is lighter/faster for threads"
+    ]
+  },
+  {
+    "id": "q3_acid_properties",
+    "category": "summarization",
+    "prompt": "Summarize what the ACID properties stand for in relational database management systems.",
+    "reference_key_points": [
+      "Atomicity: all or nothing transaction",
+      "Consistency: preserves database invariants",
+      "Isolation: concurrent transactions do not interfere",
+      "Durability: committed changes persist"
+    ]
+  },
+  {
+    "id": "q4_rest_principles",
+    "category": "factual_explanation",
+    "prompt": "List 3 core architectural principles of a RESTful web API.",
+    "reference_key_points": [
+      "Stateless communication",
+      "Client-server separation",
+      "Uniform resource identifiers (URIs) / standard HTTP methods"
+    ]
+  },
+  {
+    "id": "q5_generate_exam_question",
+    "category": "exam_generation",
+    "prompt": "Generate a single multiple-choice exam question testing understanding of stack vs queue data structures, including 4 options (A-D) and the correct answer with an explanation.",
+    "reference_key_points": [
+      "Distinguishes LIFO (Stack) vs FIFO (Queue)",
+      "Provides 4 clearly distinct options A, B, C, D",
+      "Explicitly identifies correct answer and brief rationale"
+    ]
+  }
+]

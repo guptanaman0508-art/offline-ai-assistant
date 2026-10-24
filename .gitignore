@@ -1,0 +1,28 @@
+# Python Virtual Environment
+venv/
+.venv/
+env/
+ENV/
+
+# Python bytecode & cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+
+# macOS system files
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Benchmark results, logs, and temp files (keep template / sample configs tracked)
+logs/
+*.log
+results/
+*.csv
+!tests/fixtures/*.csv
+
+# Local environment configuration
+.env
+.env.local

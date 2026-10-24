@@ -1,0 +1,6 @@
+# Official Ollama Python SDK for interacting with local Ollama daemon
+ollama>=0.4.0
+# System process inspection for Ollama daemon memory measurement
+psutil>=5.9.0
+# Pydantic v2 for data schema modeling and JSON validation
+pydantic>=2.0.0
