@@ -104,12 +104,39 @@ The detailed measurements per prompt below are taken directly from the measured 
 
 ---
 
-## 6. Critical Limitations & Distinctions
+## 6. Answer Quality Evaluation
 
-- **Performance vs. Answer Quality**:
-  - This benchmark evaluates *computational speed, memory usage, and execution reliability*. **It does not evaluate or rank factual accuracy, depth, or pedagogical quality.**
-  - A faster model or higher token generation rate does not mean the answer is more correct or free of hallucinations. Quality scoring requires independent human rubric assessment (see [data/EVALUATION_RUBRIC.md](../data/EVALUATION_RUBRIC.md)).
-- **Preliminary Nature of the Benchmark**:
-  - These results are based on a small 5-prompt academic test suite under a single measured trial (`trials=1`). Larger prompt sets across multiple runs are necessary for formal statistical confidence intervals.
-- **Hardware & Configuration Specificity**:
-  - Measurements reflect local execution on a MacBook Air M4 (16 GB unified RAM) with standard default quantization for each model tag in Ollama. Running on different hardware architectures, desktop GPUs, or alternate quantization formats (e.g., Q4_K_M vs FP16) will alter speed and memory figures.
+> **Methodology:** Responses to all five prompts were generated using `scripts/export_eval_responses.py` (with deterministic temperature 0.0) and saved to `results/full_responses_for_eval.json`. Each response was manually scored against [data/EVALUATION_RUBRIC.md](../data/EVALUATION_RUBRIC.md) across five criteria (0–2 scale, maximum score 10: *Correctness*, *Completeness*, *Clarity*, *Faithfulness*, *Instruction Following*). The individual ratings and notes are recorded in `human_eval_scores_reviewed.csv`.
+
+### Average Quality Scores
+
+| Model Name | Evaluated Prompts | Mean Score (out of 10) | Average Score (%) | Key Quality Strengths & Observations |
+|---|:---:|:---:|:---:|---|
+| **`llama3.2:3b`** | 5 | **9.0 / 10** | **90.0%** | **Highest overall score.** Consistent instruction adherence, excellent clarity on ACID properties and REST principles (both scored 10/10), and faithful explanations. Minor point deducted for slightly dense nested formatting on binary search and omitting context-switching speed on threads. |
+| **`qwen2.5:3b`** | 5 | **8.6 / 10** | **86.0%** | **Strong structure and exam question generation.** Scored a perfect 10/10 on the multiple-choice exam question generation (`q5`). Deductions occurred due to claiming best-case binary search is $O(\log n)$ instead of $O(1)$ and repeating statelessness rather than cleanly separating client-server architecture in `q4`. |
+| **`mistral:latest`** | 5 | **8.4 / 10** | **84.0%** | **Comprehensive depth on database & data structures.** Perfect 10/10 on ACID properties (`q3`) and exam question generation (`q5`). However, it struggled with strict length and constraint adherence: added unrequested filler on `q1`, used four sentences instead of three on `q2`, and scored 5/10 on `q4` by conflating REST principles and generating excessive, unstructured text. |
+
+### Prompt-by-Prompt Quality Score Breakdown
+
+| Prompt ID | `llama3.2:3b` | `qwen2.5:3b` | `mistral:latest` | Prompt Objective / Topic |
+|---|:---:|:---:|:---:|---|
+| **q1_binary_search** | 8 / 10 | 8 / 10 | 9 / 10 | 3 clear bullet points + time complexity |
+| **q2_process_vs_thread** | 9 / 10 | 9 / 10 | 8 / 10 | 3-sentence contrast between process and thread |
+| **q3_acid_properties** | 10 / 10 | 9 / 10 | 10 / 10 | Summary of relational database ACID properties |
+| **q4_rest_principles** | 10 / 10 | 7 / 10 | 5 / 10 | 3 core architectural REST principles |
+| **q5_generate_exam_question** | 8 / 10 | 10 / 10 | 10 / 10 | MCQ on stack vs queue with 4 options and answer |
+| **Average Score** | **9.0 / 10** | **8.6 / 10** | **8.4 / 10** | |
+
+---
+
+## 7. Critical Limitations & Distinctions
+
+- **Separate Evaluation Runs**:
+  - The answer-quality scores above represent rubric-based assessments of **five newly generated evaluation responses** captured in `results/full_responses_for_eval.json` using deterministic generation (temperature 0.0). They are **not** the exact original responses captured during the speed-benchmark runs, although both utilized identical prompt texts from `data/benchmark_prompts.json`.
+- **Preliminary Nature of the Evaluation**:
+  - This evaluation is preliminary because only five prompts were scored per model. While sufficient for academic demonstration and illustrating the evaluation methodology, a broader prompt suite (20–50 prompts) is recommended for statistically robust generalization.
+- **Performance vs. Quality Trade-Off**:
+  - Faster generation speed (`tokens_per_second`) does not dictate higher answer quality. For instance, `qwen2.5:3b` generated tokens faster than `llama3.2:3b` (47.23 tok/s vs. 43.35 tok/s), but `llama3.2:3b` scored higher in instruction-following precision and conceptual completeness on REST principles.
+- **Reported Process RAM vs. Total System RAM**:
+  - The RAM metric measures the Resident Set Size (RSS) of the background `ollama serve` process via `psutil`, **not** total system-wide memory or the unified memory cache of macOS.
+
