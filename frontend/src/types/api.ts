@@ -1,0 +1,57 @@
+/**
+ * TypeScript Interfaces mapping directly to the FastAPI backend schemas.
+ * (Source of truth: src/api/schemas.py)
+ */
+
+export interface HealthResponse {
+  status: string;
+  ollama_reachable: boolean;
+  ollama_host: string;
+}
+
+export interface ModelsResponse {
+  models: string[];
+  count: number;
+}
+
+export interface ChatRequest {
+  message: string;
+  model?: string;
+  session_id?: string;
+}
+
+export interface ChatResponse {
+  session_id: string;
+  model: string;
+  response: string;
+  latency_seconds: number;
+}
+
+export interface ClearHistoryResponse {
+  cleared: boolean;
+  session_id?: string | null;
+  message: string;
+}
+
+export interface MetricsResponse {
+  system: {
+    os: string;
+    os_release: string;
+    architecture: string;
+    cpu_count_logical: number;
+    cpu_count_physical: number;
+    total_ram_gb: number;
+    available_ram_gb: number;
+  };
+  ollama_rss_mb?: number | null;
+}
+
+export interface ChatMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  timestamp: string;
+  latencySeconds?: number;
+  model?: string;
+  isError?: boolean;
+}
