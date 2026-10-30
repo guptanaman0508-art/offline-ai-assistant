@@ -119,11 +119,87 @@ The benchmark records raw runs in `results/raw_runs.csv` (appending rows on subs
 
 Benchmark measurements depend on the machine, Ollama version, model tag, and system load. Token-rate and model timing fields depend on metadata returned by Ollama and can be unavailable for some responses. Structured validity measures format/schema adherence, not truth or answer quality. Score responses manually against the rubric; do not treat unscored values as measured quality.
 
-### Run tests
+### Backend REST API
 
-The test suite uses Python's built-in `unittest` runner and does not require Ollama for its mocked unit tests:
+Start the local FastAPI backend with Uvicorn:
 
 ```bash
+uvicorn src.api.main:app --host 127.0.0.1 --port 8000 --reload
+```
+
+The interactive OpenAPI documentation is available at `http://127.0.0.1:8000/docs`.
+
+#### Endpoints overview
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/health` | Check backend operational status and Ollama daemon connectivity. |
+| `GET` | `/models` | List locally installed models in Ollama (`models`, `count`). |
+| `POST` | `/chat` | Send a prompt (`message`, optional `model`, optional `session_id`). |
+| `DELETE` | `/chat/history` | Clear conversation history for a specific `session_id` or all sessions. |
+| `GET` | `/metrics` | Retrieve host CPU/RAM specs and current Ollama daemon memory (RSS MB). |
+
+#### Example Request and Response (`POST /chat`)
+
+**Request:**
+```bash
+curl -X POST http://127.0.0.1:8000/chat \
+  -H "Content-Type: application/json" \
+  -d '{
+    "message": "Explain binary search in one sentence.",
+    "model": "llama3.2:3b"
+  }'
+```
+
+**Response:**
+```json
+{
+  "session_id": "7f093374-bd9a-41d6-848e-6e84cfbf659b",
+  "model": "llama3.2:3b",
+  "response": "Binary search is an algorithm that repeatedly halves a sorted search interval to locate a target element in logarithmic time.",
+  "latency_seconds": 1.24
+}
+```
+
+> **Session Isolation Note:** Multi-turn conversation histories are stored in-memory partitioned by `session_id`. When the backend application process restarts, in-memory sessions are cleared. No persistent database or cloud storage is used.
+
+### React Frontend Application
+
+A modern, responsive dark-themed UI built with React, Vite, TypeScript, and Tailwind CSS is available in the `frontend/` directory.
+
+#### Installation and Startup
+
+1. Open a new terminal and navigate to the `frontend/` directory:
+   ```bash
+   cd frontend
+   npm install
+   ```
+
+2. Start the Vite development server:
+   ```bash
+   npm run dev
+   ```
+   The web UI will be available at `http://127.0.0.1:5173`.
+
+3. Build for production:
+   ```bash
+   npm run build
+   ```
+
+#### Configuration
+
+The frontend connects to the FastAPI backend using the environment variable `VITE_API_BASE_URL` (configured in `frontend/.env`, default: `http://127.0.0.1:8000`).
+
+### Run tests
+
+
+The test suite uses Python's built-in `unittest` runner or `pytest`. Mocked unit tests do not require a running Ollama server:
+
+```bash
+# Using pytest
+pytest -v
+
+# Or using unittest
 python -m unittest discover -s tests -v
 ```
 
@@ -132,6 +208,11 @@ python -m unittest discover -s tests -v
 ```text
 .
 ├── src/
+│   ├── api/                # FastAPI backend REST API
+│   │   ├── __init__.py
+│   │   ├── main.py         # Application entry point and route handlers
+│   │   ├── schemas.py      # Request/response Pydantic schemas
+│   │   └── session_manager.py # In-memory isolated session history manager
 │   ├── app.py              # Interactive chat CLI
 │   ├── benchmark.py        # Benchmark runner and CSV output
 │   ├── evaluation.py       # JSON validation and bounded retries
@@ -142,7 +223,8 @@ python -m unittest discover -s tests -v
 │   ├── benchmark_prompts.json
 │   └── EVALUATION_RUBRIC.md
 ├── results/                # Generated benchmark CSV files
-├── tests/                  # unittest test modules
+├── scripts/                # Utility scripts (e.g. export_eval_responses.py)
+├── tests/                  # Automated tests (unit, benchmark, and API)
 ├── requirements.txt
 └── *.md                    # Project and design documentation
 ```

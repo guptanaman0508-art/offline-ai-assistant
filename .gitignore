@@ -26,3 +26,8 @@ results/
 # Local environment configuration
 .env
 .env.local
+
+# Frontend node_modules & build artifacts
+frontend/node_modules/
+frontend/dist/
+frontend/.env
