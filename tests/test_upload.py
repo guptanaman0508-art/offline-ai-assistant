@@ -96,7 +96,7 @@ startxref
         files = {"file": ("empty.txt", b"", "text/plain")}
         response = self.client.post("/chat/upload", files=files)
         self.assertEqual(response.status_code, 400)
-        self.assertIn("Uploaded file is empty", response.json()["detail"].lower())
+        self.assertIn("uploaded file is empty", response.json()["detail"].lower())
 
     def test_upload_malformed_pdf(self):
         # PDF missing %PDF header
@@ -104,9 +104,9 @@ startxref
         files = {"file": ("bad.pdf", bad_pdf, "application/pdf")}
         response = self.client.post("/chat/upload", files=files)
         self.assertEqual(response.status_code, 400)
-        self.assertIn("valid PDF signature", response.json()["detail"].lower())
+        self.assertIn("valid pdf signature", response.json()["detail"].lower())
 
-    def test_model_unavailable(selfn):
+    def test_model_unavailable(self):
         # Simulate model not available
         self.mock_ollama.is_model_available.return_value = False
         pdf_bytes = self._create_pdf("Hello PDF")

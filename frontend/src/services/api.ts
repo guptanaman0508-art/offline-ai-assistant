@@ -77,7 +77,20 @@ export const api = {
   async sendChat(payload: ChatRequest): Promise<ChatResponse> {
     return request<ChatResponse>('/chat', {
       method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
       body: JSON.stringify(payload),
+    });
+  },
+
+  /**
+   * Upload a document (PDF, TXT, DOCX) and receive model inference response.
+   */
+  async uploadChat(formData: FormData): Promise<DocumentUploadResponse> {
+    return request<DocumentUploadResponse>('/chat/upload', {
+      method: 'POST',
+      body: formData,
     });
   },
 

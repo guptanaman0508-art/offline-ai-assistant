@@ -1,5 +1,5 @@
 import React from 'react';
-import { Plus, Clock } from 'lucide-react';
+import { Plus } from 'lucide-react';
 
 export const Sidebar: React.FC = () => {
   // Placeholder data – in a real app this would come from backend/history store

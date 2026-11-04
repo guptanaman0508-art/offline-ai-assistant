@@ -27,6 +27,7 @@ export const App: React.FC = () => {
   const [health, setHealth] = useState<HealthResponse | null>(null);
   const [isHealthChecking, setIsHealthChecking] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -72,46 +73,84 @@ export const App: React.FC = () => {
     checkHealthAndModels();
   }, []);
 
-  // Send Chat message handler
+  // Send Chat message handler (supports text chat or document upload)
   const handleSendMessage = async (textToSend?: string) => {
     const text = (textToSend || inputValue).trim();
-    if (!text || isLoading) return;
+    const fileToSend = selectedFile;
+    if ((!text && !fileToSend) || isLoading) return;
 
     setErrorMessage(null);
 
     // 1. Append user message to UI state immediately
+    const userDisplayContent = fileToSend
+      ? text
+        ? `[Attached: ${fileToSend.name}]\n\n${text}`
+        : `[Attached: ${fileToSend.name}] Please summarize this document.`
+      : text;
+
     const userMessage: ChatMessage = {
       id: `usr-${Date.now()}`,
       role: 'user',
-      content: text,
+      content: userDisplayContent,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     };
 
     setMessages((prev) => [...prev, userMessage]);
     setInputValue('');
+    setSelectedFile(null);
     setIsLoading(true);
 
-    // 2. Call backend /chat endpoint
+    // 2. Call backend endpoint (/chat or /chat/upload)
     try {
-      const response = await api.sendChat({
-        message: text,
-        model: selectedModel,
-        session_id: sessionId,
-      });
+      let assistantContent = '';
+      let latencySeconds = 0;
+      let modelUsed = selectedModel;
 
-      // Update sessionId if server resolved/assigned one
-      if (response.session_id && response.session_id !== sessionId) {
-        setSessionId(response.session_id);
-        sessionStorage.setItem('offline_ai_session_id', response.session_id);
+      if (fileToSend) {
+        const formData = new FormData();
+        formData.append('file', fileToSend);
+        if (text) {
+          formData.append('prompt', text);
+        }
+        if (selectedModel) {
+          formData.append('model', selectedModel);
+        }
+        if (sessionId) {
+          formData.append('session_id', sessionId);
+        }
+
+        const uploadRes = await api.uploadChat(formData);
+        if (uploadRes.session_id && uploadRes.session_id !== sessionId) {
+          setSessionId(uploadRes.session_id);
+          sessionStorage.setItem('offline_ai_session_id', uploadRes.session_id);
+        }
+        assistantContent = uploadRes.response;
+        latencySeconds = uploadRes.latency_seconds;
+        modelUsed = uploadRes.model;
+      } else {
+        const response = await api.sendChat({
+          message: text,
+          model: selectedModel,
+          session_id: sessionId,
+        });
+
+        // Update sessionId if server resolved/assigned one
+        if (response.session_id && response.session_id !== sessionId) {
+          setSessionId(response.session_id);
+          sessionStorage.setItem('offline_ai_session_id', response.session_id);
+        }
+        assistantContent = response.response;
+        latencySeconds = response.latency_seconds;
+        modelUsed = response.model;
       }
 
       const assistantMessage: ChatMessage = {
         id: `asst-${Date.now()}`,
         role: 'assistant',
-        content: response.response,
+        content: assistantContent,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        latencySeconds: response.latency_seconds,
-        model: response.model,
+        latencySeconds,
+        model: modelUsed,
       };
 
       setMessages((prev) => [...prev, assistantMessage]);
@@ -205,6 +244,8 @@ export const App: React.FC = () => {
           onSend={() => handleSendMessage()}
           isLoading={isLoading}
           disabled={health === null}
+          selectedFile={selectedFile}
+          onFileSelect={setSelectedFile}
         />
       </footer>
     </div>

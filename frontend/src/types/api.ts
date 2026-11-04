@@ -56,3 +56,13 @@ export interface DocumentUploadResponse {
   file_size_bytes: number;
   extracted_characters: number;
 }
+
+export interface ChatMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  timestamp: string;
+  latencySeconds?: number;
+  model?: string;
+  isError?: boolean;
+}
