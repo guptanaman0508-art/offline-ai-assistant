@@ -46,12 +46,13 @@ export interface MetricsResponse {
   ollama_rss_mb?: number | null;
 }
 
-export interface ChatMessage {
-  id: string;
-  role: 'user' | 'assistant';
-  content: string;
-  timestamp: string;
-  latencySeconds?: number;
-  model?: string;
-  isError?: boolean;
+
+export interface DocumentUploadResponse {
+  session_id: string;
+  model: string;
+  response: string;
+  latency_seconds: number;
+  filename: string;
+  file_size_bytes: number;
+  extracted_characters: number;
 }

@@ -5,6 +5,7 @@ import {
   ChatResponse,
   ClearHistoryResponse,
   MetricsResponse,
+  DocumentUploadResponse,
 } from '../types/api';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
@@ -24,8 +25,7 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
     const res = await fetch(url, {
       ...options,
       headers: {
-        'Content-Type': 'application/json',
-        ...options.headers,
+        ...(options.headers || {}),
       },
     });
 
@@ -34,12 +34,11 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
       try {
         const errorJson = await res.json();
         if (errorJson.detail) {
-          errorDetail = typeof errorJson.detail === 'string' 
-            ? errorJson.detail 
+          errorDetail = typeof errorJson.detail === 'string'
+            ? errorJson.detail
             : JSON.stringify(errorJson.detail);
         }
       } catch {
-        // Fall back to status text if JSON parsing fails
         errorDetail = res.statusText || errorDetail;
       }
       throw new ApiError(errorDetail, res.status);
@@ -50,7 +49,6 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
     if (err instanceof ApiError) {
       throw err;
     }
-    // Network / offline connection errors
     throw new ApiError(
       `Unable to reach backend at ${API_BASE_URL}. Ensure the FastAPI server is running.`,
       0

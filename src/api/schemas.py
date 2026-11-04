@@ -50,3 +50,15 @@ class MetricsResponse(BaseModel):
     """System hardware and Ollama daemon memory metrics."""
     system: Dict[str, Any] = Field(..., description="Host OS, CPU, and physical RAM hardware details")
     ollama_rss_mb: Optional[float] = Field(None, description="Current Ollama background daemon RAM in MB")
+
+
+class DocumentUploadResponse(BaseModel):
+    """Response returned upon uploading and processing a document with a prompt."""
+    session_id: str = Field(..., description="Active session ID containing this document interaction")
+    model: str = Field(..., description="Model tag that answered the request")
+    response: str = Field(..., description="Model generated response text based on the document")
+    latency_seconds: float = Field(..., description="Turnaround latency in seconds")
+    filename: str = Field(..., description="Name of the processed file")
+    file_size_bytes: int = Field(..., description="Size of the uploaded file in bytes")
+    extracted_characters: int = Field(..., description="Count of characters extracted from the document")
+

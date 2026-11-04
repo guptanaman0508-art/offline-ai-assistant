@@ -12,12 +12,13 @@ CORS is configured to enable seamless local frontend development (including Vite
 """
 
 from typing import Optional
-from fastapi import FastAPI, HTTPException, status, Query, Depends
+from fastapi import FastAPI, HTTPException, status, Query, Depends, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 
 from src.ollama_client import OllamaClient
 from src.metrics import get_hardware_info, get_ollama_memory_mb
 from src.api.session_manager import SessionManager
+from src.api.document_parser import process_uploaded_document
 from src.api.schemas import (
     HealthResponse,
     ModelsResponse,
@@ -25,6 +26,7 @@ from src.api.schemas import (
     ChatResponse,
     ClearHistoryResponse,
     MetricsResponse,
+    DocumentUploadResponse,
 )
 
 app = FastAPI(
@@ -189,6 +191,111 @@ def post_chat(
             latency_seconds=round(latency, 3),
         )
 
+    except LookupError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e),
+        ) from e
+    except ConnectionError as e:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=str(e),
+        ) from e
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Inference error with model '{selected_model}': {str(e)}",
+        ) from e
+
+
+@app.post(
+    "/chat/upload",
+    response_model=DocumentUploadResponse,
+    summary="Upload Document and Query Model",
+    tags=["Chat"],
+)
+async def post_chat_upload(
+    file: UploadFile = File(..., description="Document file (PDF, TXT, or DOCX up to 10MB)"),
+    prompt: Optional[str] = Form(None, description="Optional question or instruction about the document"),
+    model: Optional[str] = Form(None, description="Optional Ollama model tag"),
+    session_id: Optional[str] = Form(None, description="Optional session ID for conversation isolation"),
+    client: OllamaClient = Depends(get_ollama_client),
+    sessions: SessionManager = Depends(get_session_manager),
+) -> DocumentUploadResponse:
+    """
+    Process an uploaded PDF, TXT, or DOCX document securely.
+    Extracts text in memory, attaches it to the conversation context,
+    and runs local Ollama inference with the user's prompt.
+    """
+    # 1. Process and validate document
+    extracted_text, filename, file_size = await process_uploaded_document(file)
+
+    # 2. Resolve prompt text
+    user_prompt = (prompt or "").strip()
+    if not user_prompt:
+        user_prompt = "Please summarize this document and highlight its key points."
+
+    # 3. Format context message
+    composite_message = (
+        f"[Attached Document: {filename}]\n\n"
+        f"--- Document Content ---\n"
+        f"{extracted_text}\n"
+        f"--- End Document Content ---\n\n"
+        f"{user_prompt}"
+    )
+
+    # 4. Resolve or generate session ID
+    active_session_id = sessions.get_or_create_session(session_id)
+
+    # 5. Resolve model name (fallback to client default)
+    selected_model = model or client.model_name
+
+    # 6. Check server connectivity
+    if not client.is_server_online():
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Ollama daemon is not reachable at http://localhost:11434.",
+        )
+
+    # 7. Check model availability
+    try:
+        if not client.is_model_available(selected_model):
+            available = client.list_local_models()
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=(
+                    f"Model '{selected_model}' is not installed locally. "
+                    f"Available models: {available}. Run: ollama pull {selected_model}"
+                ),
+            )
+    except ConnectionError as e:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=f"Connection error to Ollama server: {str(e)}",
+        ) from e
+
+    # 8. Record user turn in session history
+    sessions.add_message(active_session_id, role="user", content=composite_message)
+    history = sessions.get_history(active_session_id)
+
+    # 9. Execute inference
+    try:
+        result = client.chat(messages=history, model_name=selected_model)
+        assistant_reply = result.get("content", "")
+        latency = result.get("latency_seconds", 0.0)
+
+        # Append assistant reply to session history
+        sessions.add_message(active_session_id, role="assistant", content=assistant_reply)
+
+        return DocumentUploadResponse(
+            session_id=active_session_id,
+            model=selected_model,
+            response=assistant_reply,
+            latency_seconds=round(latency, 3),
+            filename=filename,
+            file_size_bytes=file_size,
+            extracted_characters=len(extracted_text),
+        )
     except LookupError as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
